@@ -1,0 +1,924 @@
+{
+  "理想汽车_2021中报": [
+    {
+      "level": 1,
+      "title": "封面",
+      "page": 1
+    },
+    {
+      "level": 1,
+      "title": "目錄",
+      "page": 2
+    },
+    {
+      "level": 1,
+      "title": "公司資料",
+      "page": 3
+    },
+    {
+      "level": 1,
+      "title": "主要摘要",
+      "page": 5
+    },
+    {
+      "level": 1,
+      "title": "業務回顧及前景",
+      "page": 7
+    },
+    {
+      "level": 1,
+      "title": "管理層討論及分析",
+      "page": 10
+    },
+    {
+      "level": 1,
+      "title": "企業管治",
+      "page": 15
+    },
+    {
+      "level": 1,
+      "title": "其他資料",
+      "page": 19
+    },
+    {
+      "level": 1,
+      "title": "中期財務資料審閱報告",
+      "page": 31
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併資產負債表",
+      "page": 32
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併綜合虧損表",
+      "page": 34
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併股東（虧損）╱ 權益變動表",
+      "page": 36
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併現金流量表",
+      "page": 37
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併財務報表附註",
+      "page": 39
+    },
+    {
+      "level": 1,
+      "title": "釋義",
+      "page": 96
+    }
+  ],
+  "理想汽车_2021年报": [
+    {
+      "level": 1,
+      "title": "封面",
+      "page": 1
+    },
+    {
+      "level": 1,
+      "title": "目錄",
+      "page": 2
+    },
+    {
+      "level": 1,
+      "title": "公司資料",
+      "page": 3
+    },
+    {
+      "level": 1,
+      "title": "主要摘要",
+      "page": 5
+    },
+    {
+      "level": 1,
+      "title": "業務回顧及前景",
+      "page": 7
+    },
+    {
+      "level": 1,
+      "title": "管理層討論與分析",
+      "page": 9
+    },
+    {
+      "level": 1,
+      "title": "董事會報告",
+      "page": 13
+    },
+    {
+      "level": 1,
+      "title": "董事及高級管理層",
+      "page": 31
+    },
+    {
+      "level": 1,
+      "title": "企業管治",
+      "page": 35
+    },
+    {
+      "level": 1,
+      "title": "其他資料",
+      "page": 46
+    },
+    {
+      "level": 1,
+      "title": "獨立核數師報告",
+      "page": 57
+    },
+    {
+      "level": 1,
+      "title": "合併資產負債表",
+      "page": 61
+    },
+    {
+      "level": 1,
+      "title": "合併綜合虧損表",
+      "page": 63
+    },
+    {
+      "level": 1,
+      "title": "合併股東（虧損）╱ 權益變動表",
+      "page": 65
+    },
+    {
+      "level": 1,
+      "title": "合併現金流量表",
+      "page": 66
+    },
+    {
+      "level": 1,
+      "title": "合併財務報表附註",
+      "page": 69
+    },
+    {
+      "level": 1,
+      "title": "四年財務摘要",
+      "page": 164
+    },
+    {
+      "level": 1,
+      "title": "釋義",
+      "page": 165
+    }
+  ],
+  "理想汽车_2022中报": [
+    {
+      "level": 1,
+      "title": "封面",
+      "page": 1
+    },
+    {
+      "level": 1,
+      "title": "目錄",
+      "page": 2
+    },
+    {
+      "level": 1,
+      "title": "公司資料",
+      "page": 3
+    },
+    {
+      "level": 1,
+      "title": "財務表現摘要",
+      "page": 4
+    },
+    {
+      "level": 1,
+      "title": "業務回顧及前景",
+      "page": 6
+    },
+    {
+      "level": 1,
+      "title": "管理層討論及分析",
+      "page": 9
+    },
+    {
+      "level": 1,
+      "title": "企業管治",
+      "page": 13
+    },
+    {
+      "level": 1,
+      "title": "其他資料",
+      "page": 18
+    },
+    {
+      "level": 1,
+      "title": "中期財務資料審閱報告",
+      "page": 30
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併資產負債表",
+      "page": 31
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併綜合（虧損）╱收益表",
+      "page": 33
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併股東權益變動表",
+      "page": 35
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併現金流量表",
+      "page": 36
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併財務報表附註",
+      "page": 38
+    },
+    {
+      "level": 1,
+      "title": "釋義",
+      "page": 95
+    }
+  ],
+  "理想汽车_2022年报": [
+    {
+      "level": 1,
+      "title": "封面",
+      "page": 1
+    },
+    {
+      "level": 1,
+      "title": "目錄",
+      "page": 2
+    },
+    {
+      "level": 1,
+      "title": "公司資料",
+      "page": 3
+    },
+    {
+      "level": 1,
+      "title": "財務表現摘要",
+      "page": 4
+    },
+    {
+      "level": 1,
+      "title": "業務回顧及前景",
+      "page": 6
+    },
+    {
+      "level": 1,
+      "title": "管理層討論與分析",
+      "page": 10
+    },
+    {
+      "level": 1,
+      "title": "董事會報告",
+      "page": 14
+    },
+    {
+      "level": 1,
+      "title": "董事及高級管理層",
+      "page": 30
+    },
+    {
+      "level": 1,
+      "title": "企業管治",
+      "page": 35
+    },
+    {
+      "level": 1,
+      "title": "其他資料",
+      "page": 51
+    },
+    {
+      "level": 1,
+      "title": "獨立核數師報告",
+      "page": 66
+    },
+    {
+      "level": 1,
+      "title": "合併資產負債表",
+      "page": 70
+    },
+    {
+      "level": 1,
+      "title": "合併綜合虧損表",
+      "page": 72
+    },
+    {
+      "level": 1,
+      "title": "合併股東權益變動表",
+      "page": 74
+    },
+    {
+      "level": 1,
+      "title": "合併現金流量表",
+      "page": 75
+    },
+    {
+      "level": 1,
+      "title": "合併財務報表附註",
+      "page": 78
+    },
+    {
+      "level": 1,
+      "title": "五年財務摘要",
+      "page": 164
+    },
+    {
+      "level": 1,
+      "title": "釋義",
+      "page": 165
+    }
+  ],
+  "理想汽车_2023中报": [
+    {
+      "level": 1,
+      "title": "封面",
+      "page": 1
+    },
+    {
+      "level": 1,
+      "title": "目錄",
+      "page": 2
+    },
+    {
+      "level": 1,
+      "title": "公司資料",
+      "page": 3
+    },
+    {
+      "level": 1,
+      "title": "財務表現摘要",
+      "page": 4
+    },
+    {
+      "level": 1,
+      "title": "業務回顧及前景",
+      "page": 6
+    },
+    {
+      "level": 1,
+      "title": "管理層討論及分析",
+      "page": 9
+    },
+    {
+      "level": 1,
+      "title": "企業管治",
+      "page": 13
+    },
+    {
+      "level": 1,
+      "title": "其他資料",
+      "page": 18
+    },
+    {
+      "level": 1,
+      "title": "中期財務資料審閱報告",
+      "page": 25
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併資產負債表",
+      "page": 26
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併綜合收益表",
+      "page": 28
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併股東權益變動表",
+      "page": 30
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併現金流量表",
+      "page": 31
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併財務報表附註",
+      "page": 33
+    },
+    {
+      "level": 1,
+      "title": "釋義",
+      "page": 76
+    }
+  ],
+  "理想汽车_2023年报": [
+    {
+      "level": 1,
+      "title": "封面",
+      "page": 1
+    },
+    {
+      "level": 1,
+      "title": "目錄",
+      "page": 2
+    },
+    {
+      "level": 1,
+      "title": "公司資料",
+      "page": 3
+    },
+    {
+      "level": 1,
+      "title": "財務表現摘要",
+      "page": 4
+    },
+    {
+      "level": 1,
+      "title": "業務回顧及前景",
+      "page": 6
+    },
+    {
+      "level": 1,
+      "title": "管理層討論與分析",
+      "page": 10
+    },
+    {
+      "level": 1,
+      "title": "董事會報告",
+      "page": 15
+    },
+    {
+      "level": 1,
+      "title": "董事及高級管理層",
+      "page": 33
+    },
+    {
+      "level": 1,
+      "title": "企業管治",
+      "page": 38
+    },
+    {
+      "level": 1,
+      "title": "其他資料",
+      "page": 58
+    },
+    {
+      "level": 1,
+      "title": "獨立核數師報告",
+      "page": 75
+    },
+    {
+      "level": 1,
+      "title": "合併資產負債表",
+      "page": 79
+    },
+    {
+      "level": 1,
+      "title": "合併綜合（虧損）╱收益表",
+      "page": 81
+    },
+    {
+      "level": 1,
+      "title": "合併股東權益變動表",
+      "page": 83
+    },
+    {
+      "level": 1,
+      "title": "合併現金流量表",
+      "page": 84
+    },
+    {
+      "level": 1,
+      "title": "合併財務報表附註",
+      "page": 86
+    },
+    {
+      "level": 1,
+      "title": "五年財務摘要",
+      "page": 160
+    },
+    {
+      "level": 1,
+      "title": "釋義",
+      "page": 161
+    }
+  ],
+  "理想汽车_2024中报": [
+    {
+      "level": 1,
+      "title": "封面",
+      "page": 1
+    },
+    {
+      "level": 1,
+      "title": "目錄",
+      "page": 2
+    },
+    {
+      "level": 1,
+      "title": "公司資料",
+      "page": 3
+    },
+    {
+      "level": 1,
+      "title": "財務表現摘要",
+      "page": 4
+    },
+    {
+      "level": 1,
+      "title": "業務回顧及前景",
+      "page": 6
+    },
+    {
+      "level": 1,
+      "title": "管理層討論及分析",
+      "page": 10
+    },
+    {
+      "level": 1,
+      "title": "企業管治",
+      "page": 15
+    },
+    {
+      "level": 1,
+      "title": "其他資料",
+      "page": 20
+    },
+    {
+      "level": 1,
+      "title": "中期財務資料審閱報告",
+      "page": 36
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併資產負債表",
+      "page": 37
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併綜合收益表",
+      "page": 39
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併股東權益變動表",
+      "page": 41
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併現金流量表",
+      "page": 42
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併財務報表附註",
+      "page": 44
+    },
+    {
+      "level": 1,
+      "title": "釋義",
+      "page": 94
+    }
+  ],
+  "理想汽车_2024年报": [
+    {
+      "level": 1,
+      "title": "封面",
+      "page": 1
+    },
+    {
+      "level": 1,
+      "title": "目錄",
+      "page": 2
+    },
+    {
+      "level": 1,
+      "title": "公司資料",
+      "page": 3
+    },
+    {
+      "level": 1,
+      "title": "財務表現摘要",
+      "page": 4
+    },
+    {
+      "level": 1,
+      "title": "業務回顧及前景",
+      "page": 6
+    },
+    {
+      "level": 1,
+      "title": "管理層討論及分析",
+      "page": 10
+    },
+    {
+      "level": 1,
+      "title": "董事會報告",
+      "page": 15
+    },
+    {
+      "level": 1,
+      "title": "董事及高級管理層",
+      "page": 34
+    },
+    {
+      "level": 1,
+      "title": "企業管治",
+      "page": 39
+    },
+    {
+      "level": 1,
+      "title": "其他資料",
+      "page": 58
+    },
+    {
+      "level": 1,
+      "title": "獨立核數師報告",
+      "page": 74
+    },
+    {
+      "level": 1,
+      "title": "合併資產負債表",
+      "page": 78
+    },
+    {
+      "level": 1,
+      "title": "合併綜合收益表",
+      "page": 80
+    },
+    {
+      "level": 1,
+      "title": "合併股東權益變動表",
+      "page": 82
+    },
+    {
+      "level": 1,
+      "title": "合併現金流量表",
+      "page": 83
+    },
+    {
+      "level": 1,
+      "title": "合併財務報表附註",
+      "page": 85
+    },
+    {
+      "level": 1,
+      "title": "五年財務摘要",
+      "page": 160
+    },
+    {
+      "level": 1,
+      "title": "釋義",
+      "page": 161
+    }
+  ],
+  "理想汽车_2025中报": [
+    {
+      "level": 1,
+      "title": "封面",
+      "page": 1
+    },
+    {
+      "level": 1,
+      "title": "目錄",
+      "page": 2
+    },
+    {
+      "level": 1,
+      "title": "公司資料",
+      "page": 3
+    },
+    {
+      "level": 1,
+      "title": "財務表現摘要",
+      "page": 4
+    },
+    {
+      "level": 1,
+      "title": "業務回顧及前景",
+      "page": 6
+    },
+    {
+      "level": 1,
+      "title": "管理層討論及分析",
+      "page": 9
+    },
+    {
+      "level": 1,
+      "title": "企業管治",
+      "page": 14
+    },
+    {
+      "level": 1,
+      "title": "其他資料",
+      "page": 19
+    },
+    {
+      "level": 1,
+      "title": "中期財務資料的審閱報告",
+      "page": 35
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併資產負債表",
+      "page": 36
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併綜合收益表",
+      "page": 38
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併股東權益變動表",
+      "page": 40
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併現金流量表",
+      "page": 41
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併財務報表附註",
+      "page": 43
+    },
+    {
+      "level": 1,
+      "title": "釋義",
+      "page": 116
+    }
+  ],
+  "理想汽车_2025年报": [
+    {
+      "level": 1,
+      "title": "封面",
+      "page": 1
+    },
+    {
+      "level": 1,
+      "title": "目錄",
+      "page": 2
+    },
+    {
+      "level": 1,
+      "title": "公司資料",
+      "page": 3
+    },
+    {
+      "level": 1,
+      "title": "財務表現摘要",
+      "page": 4
+    },
+    {
+      "level": 1,
+      "title": "業務回顧及前景",
+      "page": 6
+    },
+    {
+      "level": 1,
+      "title": "管理層討論及分析",
+      "page": 10
+    },
+    {
+      "level": 1,
+      "title": "董事會報告",
+      "page": 15
+    },
+    {
+      "level": 1,
+      "title": "董事及高級管理層",
+      "page": 33
+    },
+    {
+      "level": 1,
+      "title": "企業管治",
+      "page": 38
+    },
+    {
+      "level": 1,
+      "title": "其他資料",
+      "page": 56
+    },
+    {
+      "level": 1,
+      "title": "獨立核數師報告",
+      "page": 72
+    },
+    {
+      "level": 1,
+      "title": "合併資產負債表",
+      "page": 76
+    },
+    {
+      "level": 1,
+      "title": "合併綜合收益表",
+      "page": 78
+    },
+    {
+      "level": 1,
+      "title": "合併股東權益變動表",
+      "page": 80
+    },
+    {
+      "level": 1,
+      "title": "合併現金流量表",
+      "page": 81
+    },
+    {
+      "level": 1,
+      "title": "合併財務報表附註",
+      "page": 83
+    },
+    {
+      "level": 1,
+      "title": "五年財務摘要",
+      "page": 158
+    },
+    {
+      "level": 1,
+      "title": "釋義",
+      "page": 159
+    }
+  ],
+  "理想汽车_2026中报": [
+    {
+      "level": 1,
+      "title": "封面",
+      "page": 1
+    },
+    {
+      "level": 1,
+      "title": "目錄",
+      "page": 2
+    },
+    {
+      "level": 1,
+      "title": "公司資料",
+      "page": 3
+    },
+    {
+      "level": 1,
+      "title": "財務表現摘要",
+      "page": 4
+    },
+    {
+      "level": 1,
+      "title": "業務回顧及前景",
+      "page": 6
+    },
+    {
+      "level": 1,
+      "title": "管理層討論及分析",
+      "page": 9
+    },
+    {
+      "level": 1,
+      "title": "企業管治",
+      "page": 14
+    },
+    {
+      "level": 1,
+      "title": "其他資料",
+      "page": 20
+    },
+    {
+      "level": 1,
+      "title": "中期財務資料的審閱報告",
+      "page": 36
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併資產負債表",
+      "page": 37
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併綜合收益╱（虧損）表",
+      "page": 39
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併股東權益變動表",
+      "page": 41
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併現金流量表",
+      "page": 42
+    },
+    {
+      "level": 1,
+      "title": "未經審計簡明合併財務報表附註",
+      "page": 44
+    },
+    {
+      "level": 1,
+      "title": "釋義",
+      "page": 113
+    }
+  ]
+}
