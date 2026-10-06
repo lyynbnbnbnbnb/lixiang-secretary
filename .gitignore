@@ -1,0 +1,36 @@
+# 财报 PDF 体积大且可从港交所重新下载，不进仓库
+data/raw/
+*.part
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# 训练产物（LoRA 权重、checkpoint）
+train/outputs/
+train/lora_adapter/
+*.safetensors
+*.bin
+
+# Colab 上传包 / 回传包（体积大，且能由脚本重新生成）
+train/*.zip
+train/*.pt
+
+# 造问答对时调 LLM 的响应缓存，纯中间产物
+data/cache/
+
+# 上一轮练崩的预测（README「踩坑记录·序号一」有记录，留档但不进仓库）
+eval/preds/_run1_broken/
+
+# 密钥 —— 任何形式都不进仓库
+.env
+.deepseek_key
+api_key*.txt
+*key*.txt
+
+# 一次性登录脚本（里面有本机代理端口）
+.gh_login.sh
+
+# Colab 回传 zip 的解压暂存区（内容已归位到 eval/preds 与 train/lora_adapter）
+_staging_run2/
