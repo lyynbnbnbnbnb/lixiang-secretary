@@ -53,9 +53,10 @@ PANELS = (
 # 手动断行而不是靠 wrap：matplotlib 的自动换行不认中文，
 # 会按空格断，整段糊成一团。每行控制在 44 个字以内。
 结论_LINES = (
-    "微调学会的是「怎么答」，不是「答什么」。",
-    "关键数字命中四条路线都接近 0；四条里只有微调过的模型会按董秘口径作答",
-    "（格式分 0.0 → 2.4）—— 口径能迁移到没见过的报告，知识一点也迁移不过去。",
+    "微调给的是「口径」，检索给的是「知识」—— 两条几乎正交的轴。",
+    "只微调：格式分 0.0 → 2.4，净命中仍 ≈1% —— 学会了怎么答，没学会答什么；",
+    "只检索：净命中 → 26%，格式分仍 0.0 —— 知识全来自检索到的原文；",
+    "两者合用：净命中最高 38%，但格式分回落到 1.4 —— 检索进来的原文挤掉了董秘口径。",
 )
 
 
@@ -198,8 +199,13 @@ def make_pdf(data, out_pdf, png_path=None):
                  "复现：data/ 造数据 → train/ 微调 → eval/ 生成与判分 → report/ 出表",
                  ha="center", fontsize=8.5, color="#888")
         pdf.savefig(fig)
+        # 同时存一张 PNG：本机没装 poppler，PDF 不能直接渲染，
+        # 没法「导出看图」就等于盲写版式。多这一张图才检查得了。
+        png = os.path.splitext(out_pdf)[0] + ".png"
+        fig.savefig(png, dpi=110, facecolor="white")
         plt.close(fig)
     print(f"  → {out_pdf}")
+    print(f"  → {os.path.splitext(out_pdf)[0] + '.png'}")
 
 
 def main():

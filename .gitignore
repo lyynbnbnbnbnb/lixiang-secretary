@@ -20,6 +20,13 @@ train/*.pt
 # 造问答对时调 LLM 的响应缓存，纯中间产物
 data/cache/
 
+# 检索器的向量缓存（1431 页 × 1024 维 fp32，约 6 MB，可由 generate.py 重建）
+eval/_emb_cache_*
+
+# 本地长时间跑批的临时日志与探针
+eval/*.log
+eval/_probe_*.py
+
 # 上一轮练崩的预测（README「踩坑记录·序号一」有记录，留档但不进仓库）
 eval/preds/_run1_broken/
 
@@ -34,3 +41,9 @@ api_key*.txt
 
 # Colab 回传 zip 的解压暂存区（内容已归位到 eval/preds 与 train/lora_adapter）
 _staging_run2/
+
+# 本地推理用的模型权重（4 GB，可由 train/download_models.sh 重新拉）
+train/models/
+
+# 临时交接文档（开工前看一眼，不属交付内容）
+_HANDOFF.md

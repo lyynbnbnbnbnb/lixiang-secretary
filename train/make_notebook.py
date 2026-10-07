@@ -656,7 +656,7 @@ def build_gen_cells():
 """),
     code("""
 !python /content/lixiang/eval/generate.py --arm sft_rag \\
-    --adapter /content/lixiang/lora_adapter --limit 3 --out /content/preflight
+    --adapter /content/lixiang/lora_adapter --load-4bit --limit 3 --out /content/preflight
 
 import json
 print('\\n' + '=' * 78)
@@ -676,7 +676,7 @@ for line in open('/content/preflight/sft_rag.jsonl', encoding='utf-8'):
 """),
     code("""
 !python /content/lixiang/eval/generate.py --arm sft_rag \\
-    --adapter /content/lixiang/lora_adapter
+    --adapter /content/lixiang/lora_adapter --load-4bit
 
 # 顺手自检：条数对不对、有没有出现复读
 import json

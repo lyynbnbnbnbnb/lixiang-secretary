@@ -27,6 +27,8 @@ ITEMS = [
     ("data/eval_grid.jsonl", "lixiang/data/eval_grid.jsonl"),
     ("data/pages.jsonl", "lixiang/data/pages.jsonl"),
     ("eval/generate.py", "lixiang/eval/generate.py"),
+    # 一行短命令的入口：完整命令行粘贴进 Colab 会折行，折了就报奇怪的 NameError
+    ("train/run_sft_rag.py", "lixiang/run_sft_rag.py"),
 ]
 
 ADAPTER_DIR = os.path.join(HERE, "lora_adapter")
