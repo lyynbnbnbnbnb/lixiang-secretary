@@ -177,19 +177,34 @@ def get_api_key():
         "  3) 设置环境变量 DEEPSEEK_API_KEY")
 
 
-def call_llm(system, user, retries=4, temperature=0.7):
-    """带磁盘缓存 + 重试的 DeepSeek 调用。"""
-    key = get_api_key()
-    payload = {
+def _payload(system, user, temperature):
+    return {
         "model": API_MODEL,
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": user}],
         "temperature": temperature,
         "response_format": {"type": "json_object"},
     }
-    raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+
+def cache_path(system, user, temperature=0.7):
+    """一条请求对应的缓存文件路径（键 = 请求载荷的 sha256 前 32 位）。
+
+    单独拿出来是因为溯源报告（data/make_provenance.py）要**重算**这个键，
+    把「这条问答当初是哪个原始返回生成的」从 cache/ 里原样找回来核对。
+    键算法动过的话，两边一起动。
+    """
+    raw = json.dumps(_payload(system, user, temperature),
+                     ensure_ascii=False, sort_keys=True)
     ck = hashlib.sha256(raw.encode("utf-8")).hexdigest()[:32]
-    cpath = os.path.join(CACHE, ck + ".json")
+    return os.path.join(CACHE, ck + ".json")
+
+
+def call_llm(system, user, retries=4, temperature=0.7):
+    """带磁盘缓存 + 重试的 DeepSeek 调用。"""
+    key = get_api_key()
+    payload = _payload(system, user, temperature)
+    cpath = cache_path(system, user, temperature)
     if os.path.exists(cpath):
         return json.load(open(cpath, encoding="utf-8"))["content"]
 

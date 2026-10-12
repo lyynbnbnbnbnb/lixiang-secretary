@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
-"""生成微调 notebook（Colab 版 + Kaggle 版）。
+"""生成微调 notebook（一份代码，三个平台都能跑）。
 
 用脚本生成而不是手写 .ipynb，是因为 notebook 本质是 JSON，手写转义容易出错；
-而且两个平台只差几个格子，共用一份内容改起来才不会漏。
+而且平台差异只集中在三个格子，共用一份内容改起来才不会漏。
+
+**2026-10-12 改版**（批改意见：所交笔记本未保存运行输出）：
+  · 平台自适应 —— 同一个文件在 Colab / Kaggle / **本机**都能直接跑：
+    自动认环境、认数据位置、认 dtype、按显存定批量。
+  · 新增「第 0 步 · 数据与抽检」—— 训练集统计、来源页示例、
+    人工抽检摘要、溯源审计结果直接打印在笔记本里（数字都从文件读，不手抄）。
+  · 本文件生成后用 `run_notebook_local.py` 在本机真执行、真存输出。
 
 用法：
-    python make_notebook.py              # 两个平台都生成
-    python make_notebook.py --platform kaggle
+    python make_notebook.py                  # 生成自适应版 + Kaggle 版
+    python make_notebook.py --exec-note local   # 在头部标注"输出为本机实跑"
 输出：
-    train/lixiang_lora_sft.ipynb         （Colab）
-    train/lixiang_lora_sft_kaggle.ipynb  （Kaggle）
+    train/lixiang_lora_sft.ipynb         （主交付件，本机执行后带真实输出）
+    train/lixiang_lora_sft_kaggle.ipynb  （同样的格子，文件名区分）
 """
 import argparse
 import json
@@ -28,250 +35,245 @@ def code(text):
     return (CODE, text.strip("\n"))
 
 
-# ---------------------------------------------------------------- 平台差异格
+def build_cells(exec_note=""):
+    note = (f"\n> **本次运行输出**：{exec_note}\n" if exec_note else "")
+    return [
 
-def cell_install(platform):
-    if platform == "colab":
-        return code("""
-# unsloth 在 Colab 上一键装好，装不上也无所谓 —— 加载模型时会自动退回纯 peft
-!pip install -q unsloth 2>/dev/null || echo "unsloth 装不上，将使用 peft 回退方案"
-!pip install -q transformers peft datasets accelerate bitsandbytes
-""")
-    return code("""
-# Kaggle 的镜像里 torch / transformers / peft 都带好了，基本不用装什么。
-# unsloth 可选，装不上会自动退回纯 peft（结果一样，只是慢一点）
-!pip install -q unsloth 2>/dev/null || echo "unsloth 装不上，将使用 peft 回退方案"
-!pip install -q accelerate bitsandbytes
-""".strip("\n"))
-
-
-def cell_setup(platform):
-    if platform == "colab":
-        return code("""
-import os, zipfile
-
-if not os.path.exists('/content/lixiang'):
-    from google.colab import files
-    up = files.upload()                      # 点「选择文件」，选 lixiang_colab.zip
-    name = list(up)[0]
-    with zipfile.ZipFile(name) as z:
-        z.extractall('/content')
-
-os.system('find /content/lixiang -type f | head -20')
-DATA, EVAL = '/content/lixiang/data', '/content/lixiang/eval'
-""")
-    return code("""
-import os, glob, zipfile, shutil, sys
-
-# 数据可能以三种形态存在，都认：
-#   A. 作为 Dataset 上传，Kaggle 自动解压 → /kaggle/input/<名>/lixiang/data/…
-#   B. 作为 Dataset 上传，保留 zip       → /kaggle/input/<名>/lixiang_colab.zip
-#   C. 用 Data 面板传到工作区            → /kaggle/working/lixiang_colab.zip
-WORK = '/kaggle/working/lixiang'
-
-def find_data():
-    for depth in range(1, 4):
-        pat = '/kaggle/input/' + '*/' * depth + 'lixiang/data/pages.jsonl'
-        for p in glob.glob(pat):
-            return ('dir', os.path.dirname(os.path.dirname(p)))
-    for p in (glob.glob('/kaggle/input/*/lixiang_colab.zip')
-              + glob.glob('/kaggle/input/*/*/lixiang_colab.zip')
-              + glob.glob('/kaggle/working/lixiang_colab.zip')):
-        return ('zip', p)
-    return (None, None)
-
-kind, src = find_data()
-if kind is None:
-    print("没找到数据。请确认右侧 Data 面板里已经挂上了 lixiang 数据集。")
-    print("现在 /kaggle 下有什么：")
-    os.system('find /kaggle -maxdepth 4 -name "pages.jsonl" -o -maxdepth 4 -name "*.zip" 2>/dev/null | head')
-    sys.exit(1)
-
-print(f"数据形态：{kind}  →  {src}")
-if os.path.exists(WORK):
-    shutil.rmtree(WORK)                      # 重跑时清掉旧的
-if kind == "zip":
-    with zipfile.ZipFile(src) as z:
-        z.extractall('/kaggle/working')
-else:
-    shutil.copytree(src, WORK)               # /kaggle/input 是只读的，得拷出来
-
-os.system(f'find {WORK} -type f')
-DATA, EVAL = f'{WORK}/data', f'{WORK}/eval'
-assert os.path.exists(f'{DATA}/pages.jsonl') and os.path.exists(f'{EVAL}/generate.py')
-print("\\n数据就位 ✓")
-""".strip("\n"))
-
-
-def cell_setup_gen():
-    """只做生成用的上传格：包比 lixiang_colab.zip 多一个 lora_adapter/。"""
-    return code("""
-import os, zipfile
-
-if not os.path.exists('/content/lixiang/lora_adapter'):
-    from google.colab import files
-    # 点「选择文件」，选 lixiang_gen_bundle.zip（约 77 MB，上传要等几分钟）
-    up = files.upload()
-    name = list(up)[0]
-    with zipfile.ZipFile(name) as z:
-        z.extractall('/content')
-
-os.system('find /content/lixiang -type f | head -20')
-DATA, EVAL = '/content/lixiang/data', '/content/lixiang/eval'
-ADAPTER = '/content/lixiang/lora_adapter'
-assert os.path.exists(f'{ADAPTER}/adapter_model.safetensors'), \\
-    '适配器没解压出来 —— 确认上传的是 lixiang_gen_bundle.zip'
-print('\\n数据 + 适配器就位 ✓')
-""")
-
-
-def cell_download(platform):
-    if platform == "colab":
-        return code("""
-model.save_pretrained('/content/lora_adapter')
-tok.save_pretrained('/content/lora_adapter')
-
-!cd /content && zip -qr lixiang_results.zip lora_adapter lixiang/eval/preds
-!ls -la /content/lixiang_results.zip /content/lixiang/eval/preds
-
-from google.colab import files
-files.download('/content/lixiang_results.zip')
-""")
-    return code("""
-model.save_pretrained('/kaggle/working/lora_adapter')
-tok.save_pretrained('/kaggle/working/lora_adapter')
-
-!cd /kaggle/working && zip -qr lixiang_results.zip lora_adapter lixiang/eval/preds
-!ls -la /kaggle/working/lixiang_results.zip
-!ls -la /kaggle/working/lixiang/eval/preds
-
-print('\\n打包完成。下载方式（二选一）：')
-print('  ① 右上角 Save Version（或 Save & Run All）后，')
-print('     在 Output 标签页里下载 lixiang_results.zip')
-print('  ② 右侧 Data 面板展开 /kaggle/working，右键 lixiang_results.zip 下载')
-""".strip("\n"))
-
-
-def md_header(platform):
-    if platform == "colab":
-        return md("""
+    md(f"""
 # 用理想汽车财报微调一个「董秘」· LoRA SFT
 
 《学会使用大模型》第三课 · 方向 B。
 把 212 条「投资者问 → 董秘答」喂给一个小模型，看它能记住多少、又漏掉什么。
+{note}
+**这个 notebook 一个文件三个平台都能跑**（Colab / Kaggle / 本机），
+第二个格子里会自动认出环境、找到数据、按显卡定批量 —— 不用改任何一行。
 
-**免费 T4 就能跑完**（模型 1.5B + 4bit QLoRA）。
+**本机也能跑**：1.5B + 4bit QLoRA，6 GB 显存就够（RTX 3060 实测峰值 3.2 GB）。
 
----
+## 流程一览
 
-## 怎么用
-
-1. 菜单 `代码执行程序 → 更改运行时类型 → T4 GPU`
-2. 从上往下依次运行每个格子（点格子左边的 ▶，或按 `Shift + Enter`）
-3. 最后会打包出一个 zip，下载后拿回本地跑 `eval/judge.py` 判分
-
-**要先准备好**：本地项目目录里的 `train/lixiang_colab.zip`（1 MB）。
-""")
-    return md("""
-# 用理想汽车财报微调一个「董秘」· LoRA SFT（Kaggle 版）
-
-《学会使用大模型》第三课 · 方向 B。
-把 212 条「投资者问 → 董秘答」喂给一个小模型，看它能记住多少、又漏掉什么。
-
-**免费 T4 就能跑完**（模型 1.5B + 4bit QLoRA）。
-
----
-
-## 跑之前先做三件事，缺一不可
-
-| # | 做什么 | 在哪 |
+| 步骤 | 干什么 | 产出 |
 |---|---|---|
-| 1 | **Accelerator 选 GPU T4 x2**（或 P100） | 右侧 `Settings` 面板 |
-| 2 | **Internet 打开** ← 不打开就下载不了模型 | 右侧 `Settings` 面板 |
-| 3 | **上传 `lixiang_colab.zip`** | 右侧 `Data` 面板 → Upload；或加成 Dataset |
+| 1、0 | 认环境、先看数据（来源页 / 抽检 / 溯源审计） | 数据统计 + 示例 |
+| 3–5 | 配置、加载基座 + LoRA、组装训练数据 | 可训练参数占比 |
+| 6 | **微调前**：先问三题 | 训练前对照 |
+| 6.5 | 先跑 `base` / `rag` 两条路线（趁 LoRA 还是零初始化） | `preds/base.jsonl`、`preds/rag.jsonl` |
+| 7 | 训练（212 条 × 2 轮） | loss 曲线、真实输出 |
+| 8 | **微调后**：再问同样三题 + 复读自检 | 训练前后对照 |
+| 9 | 跑 `sft` / `sft_rag` 两条路线 | `preds/sft.jsonl`、`preds/sft_rag.jsonl` |
+| 10 | 存 LoRA 适配器 | `lora_adapter/` |
 
-第 2 条最容易漏。Kaggle 默认**关着网**，不开的话第 4 格会卡在下载模型那里报错。
-
----
-
-## 怎么用
-
-从上往下依次运行每个格子（点格子左边的 ▶，或按 `Shift + Enter`）。
-最后结果打包在 `/kaggle/working/lixiang_results.zip`，下载后拿回本地跑 `eval/judge.py` 判分。
-""")
-
-
-def md_setup(platform):
-    if platform == "colab":
-        return md("## 2 · 上传数据\n\n点「选择文件」按钮，选 `lixiang_colab.zip`。")
-    return md("""
-## 2 · 布置数据
-
-zip 有两种放法，脚本会自动找到：
-
-- **右侧 `Data` 面板 → Upload**，传到 `/kaggle/working/`
-- 或把 zip 加成 Kaggle Dataset，挂载到 `/kaggle/input/` 下
-
-（`Data` 面板的上传是真正的拖拽 / 选文件，比 Colab 稳）
-""")
-
-
-def md_download(platform):
-    head = "## 12 · 保存 LoRA 适配器 + 打包下载"
-    if platform == "kaggle":
-        head += "\n\nKaggle 没有 `files.download()`，结果留在 `/kaggle/working/` 里，"
-        head += "用 Output 面板或 Save Version 取。"
-    return md(head)
-
-
-# ---------------------------------------------------------------- 共用的格子
-
-CELLS_TAIL = [
-
-md("""
-## 跑完之后（回到本地）
-
-把 `lixiang_results.zip` 解压，取出 `preds/` 里的四个 jsonl 放到本地 `eval/preds/` 下：
-
-```bash
-cd eval
-python judge.py --preds preds/base.jsonl    --label 基座 \\
-                --preds preds/sft.jsonl     --label 微调后 \\
-                --preds preds/rag.jsonl     --label 建库 \\
-                --preds preds/sft_rag.jsonl --label 微调+建库
-```
-
-会出 `scores/four_grid.md`，就是作业要交的**四格对照表**。
-
-### 四条路线各自缺什么
-
-- `base`：既不知道数字，也不会用董秘的口径答 —— 只会说"我无法提供"
-- `sft`：口径、引用格式、「该在这儿放个数字」全学会了，**但数字是编的**
-- `rag`：读得到原文，但基座只会照抄检索到的段落，不会组织成回答
-- `sft_rag`：口径来自微调、事实来自检索 —— **这才是完整方案**
-
-**结论**：微调学的是「怎么答」，知识得靠检索递进来，两者缺一不可。
+四条路线跑完，回到本地 `eval/judge.py` 判分，出四格对照表。
 """),
-]
 
+    md("""
+## 1 · 认环境、找数据
 
-def build_cells(platform):
-    return [
+三种环境都能自动适配：
 
-    md_header(platform),
+| 平台 | 数据从哪来 |
+|---|---|
+| **本机**（Windows/Linux） | 从当前目录往上找仓库根（认 `data/pages.jsonl`） |
+| **Colab** | 上传 `train/lixiang_colab.zip`（弹窗选文件） |
+| **Kaggle** | 挂数据集或把 zip 传到工作区，脚本自己找 |
 
-    md("## 1 · 安装依赖"),
-    cell_install(platform),
+依赖安装也只在该装的平台装：本机已经装好了就跳过。
+"""),
 
-    md_setup(platform),
-    cell_setup(platform),
+    code("""
+import os, sys, glob, json, platform, subprocess, time
 
-    md("## 3 · 配置"),
+# ★ 6 GB 显存跑 4bit + 长上下文生成，必须先开这个分配器选项，
+#   否则显存碎片会把进程拖到假死（本项目的踩坑记录六）。
+#   必须在 import torch 之前设置。
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
+
+IN_COLAB = os.path.isdir("/content") and not os.path.isdir("/kaggle")
+IN_KAGGLE = os.path.isdir("/kaggle")
+ON_LOCAL = not IN_COLAB and not IN_KAGGLE
+PLATFORM = "Colab" if IN_COLAB else ("Kaggle" if IN_KAGGLE else "本机")
+
+# ---------- 找项目根：往上走，找带 data/pages.jsonl 的那一层 ----------
+def find_root(start):
+    d = os.path.abspath(start)
+    for _ in range(6):
+        if os.path.exists(os.path.join(d, "data", "pages.jsonl")):
+            return d
+        d = os.path.dirname(d)
+    return None
+
+ROOT = None
+if ON_LOCAL:
+    ROOT = find_root(os.getcwd())
+else:
+    for cand in ["/content/lixiang", "/kaggle/working/lixiang"]:
+        if os.path.exists(os.path.join(cand, "data", "pages.jsonl")):
+            ROOT = cand
+
+# ---------- 该平台的依赖与数据准备 ----------
+if IN_COLAB and ROOT is None:
+    print("Colab：请在弹出的窗口里选 train/lixiang_colab.zip（约 1 MB）")
+    from google.colab import files
+    up = files.upload()
+    name = list(up)[0]
+    import zipfile
+    with zipfile.ZipFile(name) as z:
+        z.extractall("/content")
+    ROOT = find_root("/content/lixiang") or "/content/lixiang"
+
+if IN_KAGGLE and ROOT is None:
+    import shutil, zipfile
+    def _find_kaggle():
+        for depth in range(1, 4):
+            for p in glob.glob("/kaggle/input/" + "*/" * depth
+                               + "lixiang/data/pages.jsonl"):
+                return ("dir", os.path.dirname(os.path.dirname(p)))
+        for p in (glob.glob("/kaggle/input/*/lixiang_colab.zip")
+                  + glob.glob("/kaggle/input/*/*/lixiang_colab.zip")
+                  + glob.glob("/kaggle/working/lixiang_colab.zip")):
+            return ("zip", p)
+        return (None, None)
+    kind, src = _find_kaggle()
+    if kind is None:
+        raise SystemExit("没找到数据 —— 请确认右侧 Data 面板挂上了 lixiang 数据集")
+    WORK = "/kaggle/working/lixiang"
+    if os.path.exists(WORK):
+        shutil.rmtree(WORK)
+    if kind == "zip":
+        with zipfile.ZipFile(src) as z:
+            z.extractall("/kaggle/working")
+    else:
+        shutil.copytree(src, WORK)
+    ROOT = WORK
+
+assert ROOT, "没找到项目根目录（往上 6 层里没有 data/pages.jsonl）"
+DATA, EVAL = f"{ROOT}/data", f"{ROOT}/eval"
+MODELS = f"{ROOT}/train/models"
+LOCAL_BASE = f"{MODELS}/Qwen2.5-1.5B-Instruct"
+LOCAL_EMB = f"{MODELS}/Qwen3-Embedding-0.6B"
+print(f"平台：{PLATFORM}   项目根：{ROOT}")
+
+# ---------- 装依赖（按平台；本机跳过） ----------
+if IN_COLAB:
+    print(subprocess.run("pip install -q transformers peft accelerate "
+                         "bitsandbytes", shell=True).returncode == 0
+          and "依赖就绪" or "依赖安装有问题")
+elif IN_KAGGLE:
+    print(subprocess.run("pip install -q accelerate bitsandbytes",
+                         shell=True).returncode == 0 and "依赖就绪"
+          or "依赖安装有问题")
+else:
+    print("本机运行：跳过 pip（依赖已就绪）")
+
+import torch
+print(f"torch {torch.__version__} / CUDA 可用 {torch.cuda.is_available()}")
+if torch.cuda.is_available():
+    p = torch.cuda.get_device_properties(0)
+    print(f"显卡：{p.name}，显存 {p.total_memory/2**30:.1f} GB")
+print(f"Python {platform.python_version()}")
+sys.path.insert(0, DATA)
+"""),
+
+    md("""
+## 0 · 先看数据：来源页、人工抽检、溯源审计
+
+**先把要喂给模型的数据本身看一遍**，再看模型。这里的三样东西
+对应批改意见里要补的「造数据 / 来源页 / 人工抽检」：
+
+- 每条问答都带来源页（`doc / page_start / section`），回答里带 `【依据：《…》第 N 页】`
+- 60 条人工抽检的结论（`qc_sample.csv`，三列人工填的 + 一列机器复核的）
+- 溯源审计：**每条引文逐字回 1,449 页原文里查过**
+  （`source_audit.csv`，342 条生成集 + 140 条评测集全量）
+
+造数据的完整生成链（原文 → 提示词 → 模型原始返回 → 问答对）
+留痕在 `data/provenance_report.md`，原始返回可离线复核。
+"""),
+
+    code("""
+def show(title):
+    print("\\n" + "=" * 78 + f"\\n{title}\\n" + "=" * 78)
+
+show("① 数据集规模")
+train_raw = [json.loads(l) for l in open(f"{DATA}/final_train.jsonl", encoding="utf-8")]
+test_raw = [json.loads(l) for l in open(f"{DATA}/final_test.jsonl", encoding="utf-8")]
+grid = [json.loads(l) for l in open(f"{DATA}/eval_grid.jsonl", encoding="utf-8")]
+print(f"训练集 {len(train_raw)} 条 | 测试集 {len(test_raw)} 条 | 四格评测集 {len(grid)} 条")
+print("四格分布：", {c: sum(1 for r in grid if r["cell"] == c)
+                   for c in sorted({r["cell"] for r in grid})})
+
+show("② 三条问答的来源页示例（训练集）")
+for r in train_raw[:3]:
+    print(f"《{r['doc']}》第 {r['page']} 页 · {r['section']} · "
+          f"{'表格' if r['has_table'] else '叙述'}块")
+    print(f"  问：{r['question'][:60]}")
+    print(f"  答：{r['answer'][:110]}…")
+    print(f"  原文：{r['source_text'][:90].strip()}…")
+    print("-" * 74)
+
+# ---------- 人工抽检与机器复核摘要（数字从文件读，不手抄） ----------
+from common import read_csv_any          # data/common.py，兼容 GBK
+show("③ 人工抽检（60 条）与机器复核（全量 342 条）")
+qc, _ = read_csv_any(f"{DATA}/qc_sample.csv")
+n = len(qc)
+def filled(col):
+    return sum(1 for r in qc if str(r.get(col, "")).strip())
+print(f"抽检表 {n} 条：人审-有据 已填 {filled('人审-有据')}、"
+      f"人审-数字 已填 {filled('人审-数字')}、人审-处理 已填 {filled('人审-处理')}、"
+      f"备注 {filled('人审-备注')}")
+n_you = sum(1 for r in qc if r["人审-有据"] == "2")
+n_calc = sum(1 for r in qc if r["人审-数字"] == "推算")
+n_machine = sum(1 for r in qc if str(r.get("机器复核-自然", "")) == "1")
+print(f"  有据=2 的 {n_you}/{n}；正文数字属推算的 {n_calc} 条；"
+      f"机器复核判「自然」 {n_machine}/{n}（该列明确标注为模型复核，非人审）")
+if os.path.exists(f"{DATA}/machine_review.csv"):
+    mr, _ = read_csv_any(f"{DATA}/machine_review.csv")
+    keep = {json.loads(l)["qa_id"]: json.loads(l)["keep"]
+            for l in open(f"{DATA}/qa.jsonl", encoding="utf-8")}
+    kept = [r for r in mr if keep.get(r["qa_id"])]
+    ok = sum(1 for r in kept if str(r.get("与原质检一致", "")) == "1")
+    print(f"全量机器复核 342 条：与原始质检一致率 "
+          f"{100*ok/len(kept):.0f}%（保留池 {len(kept)} 条）")
+
+show("④ 溯源审计：引文逐字回原文查（source_audit.csv）")
+aud, _ = read_csv_any(f"{DATA}/source_audit.csv")
+for batch in ["生成集(342)", "评测集(140)"]:
+    sub = [r for r in aud if r["来源"] == batch]
+    nq = sum(int(r["引文数"]) for r in sub)
+    nv = sum(int(r["引文逐字"]) for r in sub)
+    nm = sum(int(r["引文查无"]) for r in sub)
+    nd = sum(1 for r in sub if str(r["报告名一致"]) == "1")
+    print(f"{batch}：依据报告名与来源一致 {nd}/{len(sub)}，"
+          f"「」引文 {nq} 句 → 逐字可查 {nv}、原文查无 {nm}")
+print("\\n详细留痕：source_audit.md（审计摘要）· provenance_report.md（生成链）")
+"""),
+
+    md("""
+## 3 · 配置
+
+超参是拿实验换来的，别乱改（下面注释写了每个数怎么来的）：
+
+- **2 轮**：212 条小样本，3 轮开始背题（loss 掉到 0.1 以下就该警惕）
+- **lr 1e-4**：2e-4 + alpha=2r 实测把模型练成复读机，减半
+- **alpha = r**：原来 2r 让等效步长翻倍，也是复读的来源之一
+
+生成批量按显存自动定：提示词带 6000 字财报原文的两条路线最吃显存。
+**批量不是越大越快** —— RTX 3060 6 GB 实测（带检索、4,700+ token 提示词）：
+
+| 批量 | 单条耗时 | 140 条预计 | 峰值显存 |
+|---|---|---|---|
+| 1 | 6 s | 14.8 分钟 | 2.19 GB |
+| 4 | 4 s | 8.8 分钟 | 2.95 GB |
+| 8 | 11 s | 25.6 分钟 | 5.07 GB ← 顶到显存上限，反而变慢 |
+
+所以 6 GB 档取 4：既快又留 2 GB 余量。
+"""),
 
     code("""
 # 基座模型。课程用的是 2B 档（Qwen3.5-2B）；这里用同档位、一定能下载到的
-# Qwen2.5-1.5B-Instruct。想换更大的就改这一行（3B 也能塞进 T4）
-MODEL    = "Qwen/Qwen2.5-1.5B-Instruct"
+# Qwen2.5-1.5B-Instruct。本机有本地权重就直接用本地目录（离线也能跑）。
+MODEL = LOCAL_BASE if os.path.exists(LOCAL_BASE) else "Qwen/Qwen2.5-1.5B-Instruct"
+EMB_MODEL = LOCAL_EMB if os.path.exists(LOCAL_EMB) else "Qwen/Qwen3-Embedding-0.6B"
+OUT_DIR = f"{ROOT}/train/_out" if ON_LOCAL else "/kaggle/working/lora_out"
 
 MAX_LEN  = 1024      # 问题和回答都不长，1024 够
 EPOCHS   = 2         # 212 条小样本：3 轮就会开始背串，2 轮够学格式
@@ -286,19 +288,37 @@ SEED     = 3407
 SYSTEM = "你是理想汽车（港股 02015）的董事会秘书，正在回答投资者提问。"
 
 import torch
-print(f"GPU：{torch.cuda.get_device_name(0) if torch.cuda.is_available() else '没有 GPU！'}")
-print(f"模型 {MODEL} / {EPOCHS} 轮 / lr {LR} / r={LORA_R}")
+DTYPE = (torch.bfloat16
+         if (torch.cuda.is_available() and torch.cuda.is_bf16_supported())
+         else (torch.float16 if torch.cuda.is_available() else torch.float32))
+
+# 生成批量：带检索的长提示词（4,700+ token）最吃显存。
+# 6 GB 档取 rag=4 是本机实测出来的：batch 4 峰值 2.95 GB / 8.8 分钟；
+# 拉到 8 反而顶到 5.07 GB、退回慢速内存，单条从 4s 涨到 11s。
+VRAM = (torch.cuda.get_device_properties(0).total_memory / 2**30
+        if torch.cuda.is_available() else 0)
+if VRAM >= 24:   BATCH_PLAIN, BATCH_RAG = 16, 8
+elif VRAM >= 14: BATCH_PLAIN, BATCH_RAG = 8, 4
+elif VRAM >= 10: BATCH_PLAIN, BATCH_RAG = 8, 2
+elif VRAM >= 5:  BATCH_PLAIN, BATCH_RAG = 8, 4
+else:            BATCH_PLAIN, BATCH_RAG = 2, 1
+print(f"基座 {MODEL}")
+print(f"{EPOCHS} 轮 / lr {LR} / r={LORA_R} / 精度 {DTYPE}")
+print(f"生成批量：不带检索 {BATCH_PLAIN} 条 / 带检索 {BATCH_RAG} 条"
+      f"（按 {VRAM:.1f} GB 显存自适应）")
 """),
 
-    md("## 4 · 加载基座模型 + LoRA"),
+    md("""
+## 4 · 加载基座模型 + LoRA（4bit QLoRA）
+
+T4 是 Turing 架构、RTX 3060 是 Ampere：两者都按各自的硬件能力选 dtype，
+统一走 4bit nf4 量化 —— **适配器是在 4bit 基座上训的，判分时的四条路线
+也必须全用 4bit**，否则对比里混进了精度差异（实测 fp16 基座会把
+董秘格式整个弄丢）。
+"""),
 
     code("""
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-
-# T4 是 Turing 架构，**硬件不支持 bfloat16**。4bit 量化若用 bf16 计算，
-# 再叠加 fp16 自混合精度训练，会静默产出垃圾权重 —— 上一版就是这么练崩的。
-# 统一成 fp16：T4 原生支持。
-DTYPE = torch.float16
 
 bnb = BitsAndBytesConfig(
     load_in_4bit=True, bnb_4bit_quant_type="nf4",
@@ -310,8 +330,7 @@ if tok.pad_token is None:
 tok.padding_side = "left"        # 解码器批量生成必须左填充
 
 model = AutoModelForCausalLM.from_pretrained(
-    MODEL, quantization_config=bnb, device_map="auto",
-    torch_dtype=DTYPE)
+    MODEL, quantization_config=bnb, device_map="auto", torch_dtype=DTYPE)
 
 # 试试 unsloth 的加速版 LoRA，不行就退回标准 peft —— 两条路结果一样
 USE_UNSLOTH = False
@@ -367,9 +386,6 @@ def to_inference():
 import json
 from torch.utils.data import Dataset
 
-train_raw = [json.loads(l) for l in open(f'{DATA}/final_train.jsonl', encoding='utf-8')]
-print(f"训练集 {len(train_raw)} 条")
-
 def encode(rec):
     '''把一条问答编成 input_ids；labels 把问题部分挖掉（-100）'''
     prompt = tok.apply_chat_template(
@@ -393,7 +409,8 @@ class QADataset(Dataset):
         return self.rows[i]
 
 ds = QADataset(train_raw)
-print("样本长度：", [len(ds[i]['input_ids']) for i in range(5)])
+print(f"训练集 {len(ds)} 条；样本长度前 5 条：",
+      [len(ds[i]['input_ids']) for i in range(5)])
 """),
 
     md("""
@@ -430,29 +447,31 @@ for q, a in zip(DEMO_Q, before):
 """),
 
     md("""
-## 6.5 · 先跑 base 和 rag 两条路线
+## 6.5 · 先跑 `base` 和 `rag` 两条路线
 
 **顺序很重要。** 这两条路线用的都是「原始基座」，
 所以趁 LoRA 还没开始训练、B 矩阵还是零初始化的时候跑最干净。
 
 （上一版是训练完之后用 `disable_adapter()` 把 LoRA 关掉再跑，
 实测**还原不干净**——base 路线出来的也是复读，整组对照就废了。）
+
+带检索的提示词有 5,700 来 token，6 GB 显存只能一条一条生成；
+跑完先把检索器**放掉**再训练 —— 它的向量模型占着 1.2 GB，
+训练正缺显存。第 9 步要用时再懒加载一次（页面向量有缓存，很快）。
 """),
 
     code("""
-import sys
+import gc
 sys.path.insert(0, EVAL)
-os.chdir(EVAL)          # generate.py 按自己的位置找 ../data
-import generate as G
+import generate as G          # 和另外两条路线共用同一份加载/生成代码
 
-grid = [json.loads(l) for l in open(f'{DATA}/eval_grid.jsonl', encoding='utf-8')]
-os.makedirs(f'{EVAL}/preds', exist_ok=True)
+os.makedirs(f"{EVAL}/preds", exist_ok=True)
 
-def run_arm(arm, system_fn, force=False):
+def run_arm(arm, system_fn, batch, force=False, free_retriever=False):
     '''生成一条路线的预测。已有结果就跳过 —— 断了重跑不用从头发。'''
-    path = f'{EVAL}/preds/{arm}.jsonl'
+    path = f"{EVAL}/preds/{arm}.jsonl"
     if os.path.exists(path) and not force:
-        n = sum(1 for _ in open(path, encoding='utf-8'))
+        n = sum(1 for _ in open(path, encoding="utf-8"))
         print(f"  {arm}: 已有 {n} 条结果，跳过（要重跑就删掉这个文件）")
         return
     prompts, metas = [], []
@@ -460,34 +479,65 @@ def run_arm(arm, system_fn, force=False):
         q = r.get("question_eval") or r["question"]
         prompts.append(G.chat(tok, system_fn(q), q))
         metas.append({"qa_id": r["qa_id"], "cell": r["cell"]})
-    outs = G.generate(model, tok, prompts, batch=8, max_new=192)
-    with open(path, 'w', encoding='utf-8') as f:
+    if free_retriever:
+        # 提示词拼完，向量模型就没用了 —— 它占着 1.2 GB 显存，
+        # 生成正是最缺显存的时候（6 GB 卡上这 1.2 GB 是生死线）
+        release_retriever()
+    t0 = time.time()
+    try:
+        outs = G.generate(model, tok, prompts, batch=batch, max_new=192)
+    except RuntimeError as e:
+        # 6 GB 卡上长上下文批量生成的兜底：显存被别的程序占满时，
+        # CUDA 会在建 GPU 映射这步直接报 "device not ready"。
+        # 与其整条路线作废，不如清理显存、降到 batch=1 慢速跑完 —— 如实打印。
+        if "CUDA" not in str(e) and "memory" not in str(e).lower():
+            raise
+        print(f"  ⚠️ 批量 {batch} 撞上显存问题（{str(e)[:120]}），"
+              f"清理后改用批量 1 重试（慢但稳）", flush=True)
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        outs = G.generate(model, tok, prompts, batch=1, max_new=192)
+    with open(path, "w", encoding="utf-8") as f:
         for m, o in zip(metas, outs):
             f.write(json.dumps({**m, "prediction": o}, ensure_ascii=False) + "\\n")
-    print(f"  {arm}: {len(outs)} 条 → {path}")
+    print(f"  {arm}: {len(outs)} 条 → {path}（{time.time()-t0:.0f}s）")
 
 # 切回推理态：梯度检查点必须关掉，否则生成出来是乱码
 to_inference()
 
-print("=== base：原始基座，不给任何上下文 ===")
-run_arm('base', lambda q: G.SYSTEM)
+# 检索器懒加载：跑 rag 时建、跑完放掉，第 9 步跑 sft_rag 时再建
+# （页面向量有磁盘缓存 eval/_emb_cache_1431.pt，重建只要几秒）
+_rt = {"r": None}
+def get_retriever():
+    if _rt["r"] is None:
+        _rt["r"] = G.build_retriever("hybrid", emb_model=EMB_MODEL)
+    return _rt["r"]
 
-print("=== rag：同一个基座 + 检索到的原文 ===")
-retriever = G.build_retriever('hybrid')      # 向量 + BM25 融合，对应作业 A 的要求
+def release_retriever():
+    _rt["r"] = None
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    print(f"检索器已释放；显存占用 {torch.cuda.memory_allocated()/2**30:.2f} GB")
 
 def sys_rag(q):
-    hits = retriever.search(q, topk=8)
+    hits = get_retriever().search(q, topk=8)
     ctx = "\\n\\n".join(f"【{h['doc']} 第 {h['page']} 页】\\n{h['text']}" for h in hits)
     return G.SYSTEM_RAG.format(context=ctx[:6000])
 
-run_arm('rag', sys_rag)
+print("=== base：原始基座，不给任何上下文 ===")
+run_arm('base', lambda q: G.SYSTEM, BATCH_PLAIN)
+
+print("=== rag：同一个基座 + 检索到的原文 ===")
+run_arm('rag', sys_rag, BATCH_RAG, free_retriever=True)
 print("\\nbase / rag 已落盘。接下来训练，训练只会影响 sft 那一条。")
 """),
 
     md("""
 ## 7 · 训练
 
-212 条 × 2 轮 ≈ 53 步，T4 上几分钟。
+212 条 × 2 轮 ≈ 53 步，T4 上几分钟，RTX 3060 上约 3 分钟。
 重点看 **loss 一路下降**，以及可训练参数只有百分之零点几。
 **loss 掉到 0.1 以下要警惕**——那是背题不是学格式，紧接着就会复读。
 """),
@@ -511,7 +561,7 @@ class Collator:
                 "labels": torch.tensor(lab)}
 
 args = TrainingArguments(
-    output_dir="/kaggle/working/lora_out",
+    output_dir=OUT_DIR,
     per_device_train_batch_size=BATCH,
     gradient_accumulation_steps=GRAD_ACC,
     num_train_epochs=EPOCHS,
@@ -532,6 +582,20 @@ trainer = Trainer(model=model, args=args, train_dataset=ds,
 stats = trainer.train()
 print(f"\\n训练完成：loss {stats.training_loss:.3f}，"
       f"用时 {stats.metrics['train_runtime']:.0f}s")
+
+# ★ 训完立刻先把适配器存一份。后面还有两条路线的长生成，
+#   要是那一步崩了（显存被别的程序抢光），至少权重不会跟着丢 ——
+#   实测崩过一次，训练成果只活在内存里，白训。
+SAVE_DIR = f"{ROOT}/train/lora_adapter" if ON_LOCAL else "/content/lora_adapter"
+model.save_pretrained(SAVE_DIR)
+tok.save_pretrained(SAVE_DIR)
+print(f"适配器已先保存一份 → {SAVE_DIR}")
+
+del trainer
+gc.collect()
+if torch.cuda.is_available():
+    torch.cuda.empty_cache()
+print(f"训练后显存占用 {torch.cuda.memory_allocated()/2**30:.2f} GB")
 """),
 
     md("## 8 · 微调后：再问同样三题\n\n和上面那三屏对照着看。"),
@@ -539,7 +603,8 @@ print(f"\\n训练完成：loss {stats.training_loss:.3f}，"
     code("""
 # ★ 训练完必须切回推理态 —— 漏了这一步就是「训练前正常、训练后复读」
 to_inference()
-print(f"  训练态={model.training}  梯度检查点={getattr(model,'is_gradient_checkpointing',False)}"
+print(f"  训练态={model.training}  "
+      f"梯度检查点={getattr(model,'is_gradient_checkpointing',False)}"
       f"  use_cache={model.config.use_cache}")
 
 # 体温计：一道和财报完全无关的常识题。
@@ -573,160 +638,105 @@ print("自检通过：训练后没有出现复读。")
 """),
 
     md("""
-## 9 · sft / sft_rag 路线（带 LoRA）
-
-base 和 rag 在第 6.5 格已经跑完了（那时还没训练，`B` 矩阵是零初始化）。
-
-这里跑两条都用 LoRA 的路线：
+## 9 · `sft` / `sft_rag` 路线（带 LoRA）
 
 - **sft** = 微调后 + 不给上下文 → 只看写进权重里有多少
 - **sft_rag** = 微调后 + 检索到的原文 → 口径来自微调，事实来自检索
 
+**为什么不把 LoRA 合并进权重再跑**（试过、放弃了）：`merge_and_unload()`
+要把 nf4 主权重反量化、加上 LoRA 增量、再量化回去 —— 增量本身只有
+百分之几的量级，我在这台机器上实测**重量化把增量抹掉了**：
+合并后的模型输出和**没微调的基座逐字一样**（sft 与 base 的前三条回答完全相同），
+董秘格式整个消失。所以这里老老实实挂 adapter 生成。
+（合并能快 3 倍、省 1.2 GB，但那是个陷阱 —— 四组对照见 `_scratch/bench_peft.py`，
+结论 = 别合并。）
+
 `sft_rag` 是四条里唯一三条腿都齐的，也是结论的关键证据。
-`retriever` 和 `sys_rag` 都还是第 6.5 格定义的那个，直接复用。
+`sys_rag` 还是 6.5 格定义的那个（检索器此时会懒加载重建，几秒钟）。
 """),
 
     code("""
-run_arm('sft', lambda q: G.SYSTEM)
-run_arm('sft_rag', sys_rag)
+# 先跑长的那条（sft_rag 要现场检索 + 长上下文，是四条里最慢的），再跑 sft
+run_arm('sft_rag', sys_rag, BATCH_RAG, free_retriever=True)
+run_arm('sft', lambda q: G.SYSTEM, BATCH_PLAIN)
 """),
-
-    md_download(platform),
-    cell_download(platform),
-] + CELLS_TAIL
-
-
-def build_gen_cells():
-    """「只生成」notebook —— 复用已经训好的 LoRA，只补 sft_rag 这一条路线。
-
-    为什么不直接重跑完整 notebook：模型上一轮已经训好了，重训纯属浪费
-    Colab 配额（免费额度用完要等 12–24 小时）。生成才是耗时的那一步。
-
-    这个 notebook 不碰训练，所有推理都走 generate.py 的命令行 ——
-    和另外三条路线用的是**同一份加载代码**，避免两套实现跑出不同结果。
-    """
-    return [
 
     md("""
-# 补跑 `sft_rag` 路线（只生成，不训练）
+## 10 · 四条路线落盘自检 + 保存适配器
 
-上一轮已经把 LoRA 训好并打包在 `lixiang_results.zip` 里了。
-这个 notebook 复用那个适配器，只补跑第四条路线：
-
-> **`sft_rag` = 微调后的模型 + 检索到的财报原文**
-
-口径来自微调，事实来自检索 —— 四条路线里唯一三条腿都齐的一条。
-
-**全程不训练**，只做生成，T4 上约 25–30 分钟。
-
-### 跑之前
-
-右上角 `Runtime` → `Change runtime type` → 确认是 **T4 GPU**。
-
-> 免费版 Colab 的 GPU 配额是黑盒，用完会报「已达到使用量限额」且不说何时恢复。
-> 真遇到了就等 12–24 小时再跑，代码本身没问题。
+判分在本地 `eval/judge.py` 做（判分和生成分开，才能换模型重判）。
+这里先做个轻量自检：条数对不对、每条路线的**格式率**（有没有 `【依据】`、
+有没有 `「」` 引用）——这就是四格表里"格式分"的原料。
 """),
 
-    md("## 1 · 安装依赖"),
-    cell_install("colab"),
-
-    md("""
-## 2 · 上传数据 + 适配器
-
-点下面这格的运行按钮，会弹出「选择文件」——
-选本地的 **`train/lixiang_gen_bundle.zip`**（约 77 MB）。
-
-> 是**点按钮选文件**，不是拖拽。上传 77 MB 要等几分钟，进度条走完再往下跑。
-"""),
-    cell_setup_gen(),
-
-    md("""
-## 3 · 先试跑 3 条（约 3 分钟）
-
-**别跳过这格。** 跑全量要 25 分钟，先花 3 分钟确认三件事都搭对了：
-
-1. 适配器挂上了吗（回答应该是董秘口吻，不是「我无法提供」）
-2. 检索通了吗（回答里的数字应该能在原文片段里找到）
-3. 输出格式对吗（应该有【依据：《…》第 N 页】）
-
-三条里有任何一条不对，就**别往下跑**，先回来找我。
-
-第一次跑会向量化 1431 页（1–2 分钟）并把结果缓存下来，
-第 4 格会直接读缓存，不会重复算。
-"""),
     code("""
-!python /content/lixiang/eval/generate.py --arm sft_rag \\
-    --adapter /content/lixiang/lora_adapter --load-4bit --limit 3 --out /content/preflight
+import re
+print(f"{'路线':<10}{'条数':>5}{'有【依据】':>12}{'有「」引用':>12}")
+for arm in ['base', 'sft', 'rag', 'sft_rag']:
+    path = f"{EVAL}/preds/{arm}.jsonl"
+    rows = [json.loads(l) for l in open(path, encoding="utf-8")]
+    n_cite = sum(1 for r in rows if re.search(r"【依据[:：]", r["prediction"]))
+    n_q = sum(1 for r in rows if "「" in r["prediction"] and "」" in r["prediction"])
+    print(f"{arm:<10}{len(rows):>5}{n_cite:>10}  {n_q:>10}  ")
+    assert len(rows) == 140, f"{arm} 应该有 140 条，实际 {len(rows)} 条"
+print("\\n四条路线各 140 条，全部落盘 ✓")
+"""),
 
-import json
-print('\\n' + '=' * 78)
-for line in open('/content/preflight/sft_rag.jsonl', encoding='utf-8'):
-    r = json.loads(line)
-    print('-' * 78)
-    print(f"{r['cell']}  {r['qa_id']}")
-    print(r['prediction'][:500])
+    code("""
+# 保存 LoRA 适配器（训练完已先存过一份，这里再存一次保证是最新的）
+model.save_pretrained(SAVE_DIR)
+tok.save_pretrained(SAVE_DIR)
+print(f"适配器已保存 → {SAVE_DIR}")
+
+if IN_COLAB:
+    import subprocess
+    subprocess.run(f"cd /content && zip -qr lixiang_results.zip lora_adapter "
+                   f"lixiang/eval/preds", shell=True)
+    from google.colab import files
+    files.download("/content/lixiang_results.zip")
+elif IN_KAGGLE:
+    print("Kaggle：结果留在 /kaggle/working/，Save Version 后从 Output 面板下载")
 """),
 
     md("""
-## 4 · 跑满 140 条
+## 跑完之后（回到本地判分）
 
-上面三条看着没问题就往下跑。约 20–25 分钟，会打印进度。
+```bash
+cd eval
+python judge.py --preds preds/base.jsonl    --label 基座 \\
+                --preds preds/sft.jsonl     --label 微调后 \\
+                --preds preds/rag.jsonl     --label 建库 \\
+                --preds preds/sft_rag.jsonl --label 微调+建库
+```
 
-跑完结果落在 `/content/lixiang/eval/preds/sft_rag.jsonl`。
-"""),
-    code("""
-!python /content/lixiang/eval/generate.py --arm sft_rag \\
-    --adapter /content/lixiang/lora_adapter --load-4bit
+会出 `scores/four_grid.md`，就是作业要交的**四格对照表**。
+格式分（0–2）、事实（净命中 + 模型判分）、引用分（0–3，引文逐字回原文查）
+三个维度分开评 —— 微调模型会在编造的数字外面套上漂亮的「」引用，
+只看格式分会被它骗过去。
 
-# 顺手自检：条数对不对、有没有出现复读
-import json
-p = '/content/lixiang/eval/preds/sft_rag.jsonl'
-rows = [json.loads(l) for l in open(p, encoding='utf-8')]
-print(f'\\n{len(rows)} 条')
-assert len(rows) == 140, f'应该是 140 条，实际 {len(rows)} 条 —— 别下载，先告诉我'
-print('条数正确 ✓')
-print('\\n前两条长这样：')
-for r in rows[:2]:
-    print('-' * 78)
-    print(f"{r['cell']}  {r['qa_id']}")
-    print(r['prediction'][:300])
-"""),
+### 四条路线各自缺什么
 
-    md("## 5 · 打包下载"),
-    code("""
-!cd /content && zip -q lixiang_sft_rag.zip lixiang/eval/preds/sft_rag.jsonl
-!ls -la /content/lixiang_sft_rag.zip
+- `base`：既不知道数字，也不会用董秘的口径答 —— 只会说"我无法提供"
+- `sft`：口径、引用格式、「该在这儿放个数字」全学会了，**但数字和引文是编的**
+- `rag`：读得到原文，但基座只会照抄检索到的段落，不会组织成回答
+- `sft_rag`：口径来自微调、事实来自检索 —— **这才是完整方案**
 
-from google.colab import files
-files.download('/content/lixiang_sft_rag.zip')
-"""),
-
-    md("""
-## 跑完之后
-
-把 `lixiang_sft_rag.zip` 里的 `sft_rag.jsonl` 放到本地 `eval/preds/` 下，
-然后我在本地跑判分，四条路线一起出四格对照表。
-
-**Colab 没有「暂停」**——关标签页 = 虚拟机销毁，训练结果和预测全没。
-跑的时候别关标签页。
+**结论**：微调学的是「怎么答」，知识得靠检索递进来，两者缺一不可。
 """),
     ]
 
 
-def write_notebook(platform, path, cells=None):
-    cells = cells if cells is not None else build_cells(platform)
+def write_notebook(path, exec_note=""):
+    cells = build_cells(exec_note)
     nb = {
         "cells": [],
         "metadata": {
             "kernelspec": {"display_name": "Python 3", "name": "python3"},
             "language_info": {"name": "python"},
-            "accelerator": "GPU",
         },
         "nbformat": 4,
         "nbformat_minor": 0,
     }
-    if platform == "colab":
-        nb["metadata"]["colab"] = {"provenance": [], "toc_visible": True}
     for kind, src in cells:
         cell = {"cell_type": kind, "metadata": {},
                 "source": src.splitlines(True)}
@@ -748,24 +758,18 @@ def write_notebook(platform, path, cells=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--platform", choices=["colab", "kaggle", "both"],
-                    default="both")
-    ap.add_argument("--mode", choices=["train", "gen", "all"], default="all",
-                    help="train=完整微调流程；gen=复用已训好的适配器只补生成")
+    ap.add_argument("--exec-note", default="",
+                    help='标注运行输出来源，如 "本机 RTX 3060 实跑（2026-10-12）"')
+    ap.add_argument("--only", default="",
+                    help="只写某个文件：main / kaggle")
     args = ap.parse_args()
 
-    if args.mode in ("train", "all"):
-        if args.platform in ("colab", "both"):
-            write_notebook("colab",
-                           os.path.join(HERE, "lixiang_lora_sft.ipynb"))
-        if args.platform in ("kaggle", "both"):
-            write_notebook("kaggle",
-                           os.path.join(HERE, "lixiang_lora_sft_kaggle.ipynb"))
-
-    if args.mode in ("gen", "all"):
-        write_notebook("colab",
-                       os.path.join(HERE, "lixiang_gen_only.ipynb"),
-                       cells=build_gen_cells())
+    if args.only != "kaggle":
+        write_notebook(os.path.join(HERE, "lixiang_lora_sft.ipynb"),
+                       args.exec_note)
+    if args.only != "main":
+        write_notebook(os.path.join(HERE, "lixiang_lora_sft_kaggle.ipynb"),
+                       args.exec_note)
     return 0
 
 
